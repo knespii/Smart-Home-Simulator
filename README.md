@@ -12,7 +12,7 @@ A .NET-based simulation platform designed to model, control, and analyze smart h
 
 ## Tech Stack
 * **Language:** C# (.NET 8.0/9.0)
-* **Database:** SQLite / Entity Framework Core
+* **Database:** MongoDb
 * **Version Control:** Git
 * **Project Management:** Gitea Projects (Kanban methodology)
 
