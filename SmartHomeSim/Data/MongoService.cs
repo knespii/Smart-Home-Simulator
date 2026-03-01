@@ -11,7 +11,7 @@ public class MongoService
     {
         var connectionString = configuration.GetConnectionString("MongoDb");
         var client = new MongoClient(connectionString);
-        _database = client.GetDatabase("SmartHomeSim");
+        _database = client.GetDatabase("smarthomesim");
     }
 
     public User? Login(string username, string password)
