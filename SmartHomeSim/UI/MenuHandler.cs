@@ -1,6 +1,8 @@
 using System;
 using SmartHomeSim.Models;
 using SmartHomeSim.Data;
+using MongoDB.Bson;
+
 namespace SmartHomeSim.UI;
 
 public class MenuHandler
@@ -60,16 +62,26 @@ public class MenuHandler
                     if (rooms.Count == 0)
                     {
                         Console.WriteLine("nemáte vytvořené žádné místnosti");
+                        Console.ReadKey();
+                        continue;
                     }
                     else
                     {
-                        foreach (var Room in rooms)
+                        Console.WriteLine("--- Seznam místností ---");
+                        for (int i = 0; i < rooms.Count; i++)
                         {
-                            Console.WriteLine($"-  {Room.Name}");
+                            Console.WriteLine($"{i + 1}. {rooms[i].Name}");
                         }
-                    } 
-                    Console.WriteLine("\n Pro vrácení stiskněte libovolnou klávesu");
-                    Console.ReadKey();
+
+                        Console.WriteLine("0. Zpět");
+
+                        Console.WriteLine("\n Vyberte místnost pro správu:");
+                        string input = Console.ReadLine() ?? "";
+                        if (int.TryParse(input, out int index) && index > 0 && index <= rooms.Count)
+                        {
+                            ShowRoomDetail(rooms[index - 1]);
+                        }
+                    }
                     break;
                     
                 case("2"):
@@ -86,6 +98,7 @@ public class MenuHandler
                         _db.CreateRoom(newRoomName);
         
                         Console.WriteLine($"\nMístnost '{newRoomName}' byla úspěšně uložena.");
+                        Console.ReadKey();
                     }
                     break;
                 
@@ -97,4 +110,77 @@ public class MenuHandler
         }
     }
 
+    private void ShowRoomDetail(Room room)
+    {
+        bool inRoom = true;
+        while (inRoom)
+        {
+            Console.Clear();
+            Console.WriteLine($"--- Správa místnosti: {room.Name} ---");
+            
+            var devices = _db.GetDevicesInRoom(room.Id);
+
+            if (devices.Count == 0)
+            {
+                Console.WriteLine("V této místnosti nejsou žádná zařízení.");
+            }
+            else
+            {
+                for (int i = 0; i < devices.Count; i++)
+                {
+                    var d = devices[i];
+                    string status = d.IsOn ? "ZAPNUTO" : "VYPNUTO";
+                    Console.WriteLine($"{i + 1}. [{d.Type}] {d.Name} - {status}");
+                }
+            }
+
+            Console.WriteLine("\n[A] Přidat zařízení | [S] Smazat zařízení | [0] Zpět");
+            string choice = Console.ReadLine()?.ToLower() ?? "";
+
+            if (choice == "0")
+            {
+                inRoom = false;
+            }
+            else if (choice == "a")
+            {
+                AddDeviceMenu(room.Id);
+            }
+            else if (choice == "s")
+            {
+                DeleteDeviceMenu(devices);
+            }
+        }
+    }
+
+    private void AddDeviceMenu(ObjectId roomId)
+    {
+        Console.Clear();
+        Console.WriteLine("Vyberte typ: 1. Světlo | 2. Termostat | 3. Senzor");
+        string typeChoice = Console.ReadLine() ?? "";
+        
+        Console.Write("Název zařízení: ");
+        string name = Console.ReadLine() ?? "";
+
+        Device? newDev = typeChoice switch
+        {
+            "1" => new Light { Name = name, Type = "Light", RoomId = roomId },
+            "2" => new Thermostat { Name = name, Type = "Thermostat", RoomId = roomId },
+            "3" => new MotionSensor { Name = name, Type = "MotionSensor", RoomId = roomId },
+            _ => null
+        };
+
+        if (newDev != null)
+        {
+            _db.AddDevice(newDev);
+        }
+    }
+
+    private void DeleteDeviceMenu(List<Device> devices)
+    {
+        Console.Write("Zadejte číslo zařízení ke smazání: ");
+        if (int.TryParse(Console.ReadLine(), out int idx) && idx > 0 && idx <= devices.Count)
+        {
+            _db.DeleteDevice(devices[idx - 1].Id);
+        }
+    }
 }
