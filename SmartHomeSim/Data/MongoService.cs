@@ -30,13 +30,13 @@ public class MongoService
 
     public List<Room> GetRooms()
     {
-        var collection = _database.GetCollection<Room>("Rooms");
+        var collection = _database.GetCollection<Room>("rooms");
         return collection.Find(_ => true).ToList();
     }
 
     public void CreateRoom(string roomName)
     {
-        var collection = _database.GetCollection<Room>("Rooms");
+        var collection = _database.GetCollection<Room>("rooms");
         var newRoom = new Room { Name = roomName };
         collection.InsertOne(newRoom);
     }
@@ -54,7 +54,13 @@ public class MongoService
         var update = Builders<Device>.Update.Set(d => d.IsOn, newState);
         collection.UpdateOne(filter, update);
     }
-    
+
+    public void UpdateDevice(Device device)
+    {
+        var collection = _database.GetCollection<Device>("devices");
+        collection.ReplaceOne(d => d.Id == device.Id, device);
+    }
+
     public void DeleteDevice(ObjectId deviceId)
     {
         var collection = _database.GetCollection<Device>("devices");
@@ -65,5 +71,10 @@ public class MongoService
     {
         var collection = _database.GetCollection<Device>("devices");
         return collection.Find(d => d.RoomId == roomId).ToList();
+    }
+    
+    public List<Device> GetAllDevices()
+    {
+        return _database.GetCollection<Device>("devices").Find(_ => true).ToList();
     }
 }
