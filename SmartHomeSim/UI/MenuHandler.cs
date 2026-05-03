@@ -180,6 +180,7 @@ public class MenuHandler
                     break;
 
                 case "5":
+                    Console.Clear();
                     if (_loggedUser?.Role == "Admin")
                     {
                         Console.WriteLine("---Zvolte režim---");
