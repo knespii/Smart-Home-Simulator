@@ -26,3 +26,4 @@ Thumbs.db
 
 ## MongoDB / Lokální data
 appsettings.Development.json
+appsettings.json
