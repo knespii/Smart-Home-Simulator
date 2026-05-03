@@ -9,7 +9,8 @@ public class MenuHandler
 {
     private readonly MongoService _db;
     private User? _loggedUser;
-    private Simulator _sim = new Simulator();   
+    private Simulator _sim = new Simulator();
+
     public MenuHandler(MongoService db)
     {
         _db = db;
@@ -34,7 +35,7 @@ public class MenuHandler
                 Console.ReadKey();
             }
         }
-        
+
         Console.Clear();
         ShowMainMenu();
     }
@@ -45,14 +46,24 @@ public class MenuHandler
         while (run)
         {
             Console.Clear();
-            Console.WriteLine($"---logged in as: {_loggedUser?.Username}---");
+            Console.WriteLine($"---logged in as: {_loggedUser?.Username} {_loggedUser?.Role}---");
             Console.WriteLine("1 - Vypsat místnosti");
-            Console.WriteLine("2 - Přidat místnost");
-            Console.WriteLine("3 - zpočítat zpotřebu");
-            Console.WriteLine("4 - nastavit pravidla");
-            Console.WriteLine("5 - nastavit režim");
+
+            if (_loggedUser?.Role == "Admin")
+            {
+                Console.WriteLine("2 - Přidat místnost");
+            }
+
+            Console.WriteLine("3 - spočítat spotřebu");
+
+            if (_loggedUser?.Role == "Admin")
+            {
+                Console.WriteLine("4 - nastavit pravidla");
+                Console.WriteLine("5 - nastavit režim");
+            }
+            Console.WriteLine("6 - Vyhledat zařízení");
             Console.WriteLine("0 - Odhlásit se");
-            
+
             string choice = Console.ReadLine() ?? "";
 
             switch (choice)
@@ -73,6 +84,7 @@ public class MenuHandler
                     {
                         Console.WriteLine($"{i + 1}. {rooms[i].Name}");
                     }
+
                     Console.WriteLine("0. Zpět");
 
                     Console.WriteLine("\n Vyberte místnost pro správu:");
@@ -81,44 +93,52 @@ public class MenuHandler
                     {
                         ShowRoomDetail(rooms[index - 1]);
                     }
+
                     break;
-                    
+
                 case "2":
                     Console.Clear();
-                    Console.WriteLine("Zadejte název nové místnosti:");
-                    string newRoomName = Console.ReadLine() ?? "";
-                    
-                    if (string.IsNullOrWhiteSpace(newRoomName))
+                    if (_loggedUser?.Role == "Admin")
                     {
-                        Console.WriteLine("Název nesmí být prázdný!");
+                        Console.WriteLine("Zadejte název nové místnosti:");
+                        string newRoomName = Console.ReadLine() ?? "";
+
+                        if (string.IsNullOrWhiteSpace(newRoomName))
+                        {
+                            Console.WriteLine("Název nesmí být prázdný!");
+                        }
+                        else
+                        {
+                            _db.CreateRoom(newRoomName);
+                            Console.WriteLine($"\nMístnost '{newRoomName}' byla úspěšně uložena.");
+                            Console.ReadKey();
+                        }
                     }
                     else
                     {
-                        _db.CreateRoom(newRoomName);
-                        Console.WriteLine($"\nMístnost '{newRoomName}' byla úspěšně uložena.");
-                        Console.ReadKey();
+                        AccessDeniedMessage();
                     }
+
                     break;
-                
+
                 case "3":
                     Console.Clear();
-                    var allDevices = _db.GetAllDevices();
-                    _sim.TimeStep(1, allDevices);
+                    var foundDevices = _db.GetAllDevices();
 
-                    if (allDevices.Count == 0)
+                    if (foundDevices.Count == 0)
                     {
                         Console.WriteLine("V domě nejsou žádná zařízení");
                     }
                     else
                     {
-                        _sim.TimeStep(1, allDevices);
+                        _sim.TimeStep(1, foundDevices);
                     }
 
-                    foreach (var dev in allDevices)
+                    foreach (var dev in foundDevices)
                     {
                         _db.UpdateDevice(dev);
                     }
-                    
+
                     Console.WriteLine("--- Simulace času ---");
                     Console.WriteLine($"Čas posunut o 1 hodinu.");
                     Console.WriteLine($"Aktuální simulační čas: {_sim.currentTime}");
@@ -126,41 +146,97 @@ public class MenuHandler
                     Console.WriteLine("\nStiskněte libovolnou klávesu...");
                     Console.ReadKey();
                     break;
-                
+
                 case "4":
                     Console.Clear();
-                    Console.WriteLine("--- Nastavení nové automatizace ---");
-                    Console.Write("V kolik hodin? (0-23): ");
-                    int hour = int.Parse(Console.ReadLine());
-    
-                    Console.Write("Název zařízení: ");
-                    string name = Console.ReadLine();
-    
-                    Console.Write("Zapnout (1) nebo Vypnout (0)? ");
-                    bool state = Console.ReadLine() == "1";
+                    if (_loggedUser?.Role == "Admin")
+                    {
+                        Console.WriteLine("--- Nastavení nové automatizace ---");
+                        Console.Write("V kolik hodin? (0-23): ");
+                        if (!int.TryParse(Console.ReadLine(), out int hour)) {
+                            Console.WriteLine("Neplatný formát hodiny!");
+                            Console.ReadKey();
+                            return;
+                        }
 
-                    var newAuto = new Automation { Hour = hour, DeviceName = name, SetIsOn = state };
-    
-                    _sim.Automations.Add(newAuto);
-                    
-                    Console.WriteLine("Automatizace nastavena!");
+                        Console.Write("Název zařízení: ");
+                        string name = Console.ReadLine();
+
+                        Console.Write("Zapnout (1) nebo Vypnout (0)? ");
+                        bool state = Console.ReadLine() == "1";
+
+                        var newAuto = new Automation { Hour = hour, DeviceName = name, SetIsOn = state };
+
+                        _sim.Automations.Add(newAuto);
+
+                        Console.WriteLine("Automatizace nastavena!");
+                        Console.ReadKey();
+                    }
+                    else
+                    {
+                        AccessDeniedMessage();
+                    }
+
+                    break;
+
+                case "5":
+                    if (_loggedUser?.Role == "Admin")
+                    {
+                        Console.WriteLine("---Zvolte režim---");
+                        Console.WriteLine("1.Normalní");
+                        Console.WriteLine("2.Noc");
+                        Console.WriteLine("3.Dovolená");
+                        string volba = Console.ReadLine();
+                        _sim.CurrentMode = volba switch
+                        {
+                            "2" => HomeMode.Night,
+                            "3" => HomeMode.Vacation,
+                            _ => HomeMode.Normal
+                        };
+                    }
+                    else
+                    {
+                        AccessDeniedMessage();
+                    }
+                    break;
+
+                case "6" :
+                    Console.Clear();
+                    Console.WriteLine("--- Vyhledávání zařízení ---");
+                    Console.Write("Zadejte název nebo část názvu: ");
+                    string searchInput = Console.ReadLine() ?? "";
+
+                    if (string.IsNullOrWhiteSpace(searchInput))
+                    {
+                        Console.WriteLine("Nebyl zadán žádný text pro vyhledávání.");
+                        Console.ReadKey();
+                        return;
+                    }
+
+                    var allDevices = _db.GetAllDevices();
+
+                    var filtered = allDevices
+                        .Where(d => d.Name.Contains(searchInput, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (filtered.Count == 0)
+                    {
+                        Console.WriteLine($"\nNebylo nalezeno žádné zařízení odpovídající názvu: '{searchInput}'");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"\nNalezeno {filtered.Count} zařízení:");
+                        Console.WriteLine("-------------------------------------------");
+                        foreach (var dev in filtered)
+                        {
+                            string status = dev.IsOn ? "ZAPNUTO" : "VYPNUTO";
+                            Console.WriteLine($"- [{dev.Type}] {dev.Name} (Stav: {status})");
+                        }
+                    }
+
+                    Console.WriteLine("\nStiskněte libovolnou klávesu pro návrat...");
                     Console.ReadKey();
                     break;
-                
-                case "5":
-                    Console.WriteLine("---Zvolte režim---");
-                    Console.WriteLine("1.Normalní");
-                    Console.WriteLine("2.Noc");
-                    Console.WriteLine("3.Dovolená");
-                    string volba = Console.ReadLine();
-                    _sim.CurrentMode = volba switch 
-                    {
-                        "2" => HomeMode.Night,
-                        "3" => HomeMode.Vacation,
-                        _ => HomeMode.Normal 
-                    };
-                    break;
-                
                 case "0":
                     run = false;
                     _loggedUser = null;
@@ -176,7 +252,7 @@ public class MenuHandler
         {
             Console.Clear();
             Console.WriteLine($"--- Správa místnosti: {room.Name} ---");
-            
+
             var devices = _db.GetDevicesInRoom(room.Id);
 
             if (devices.Count == 0)
@@ -208,11 +284,11 @@ public class MenuHandler
             {
                 DeleteDeviceMenu(devices);
             }
-            else if (choice =="u")
+            else if (choice == "u")
             {
                 Console.WriteLine("Zadej číslo zařízení pro ovládání:");
                 string deviceInput = Console.ReadLine() ?? "";
-                
+
                 if (int.TryParse(deviceInput, out int deviceIdx) && deviceIdx > 0 && deviceIdx <= devices.Count)
                 {
                     HandleDeviceControl(devices[deviceIdx - 1]);
@@ -260,19 +336,23 @@ public class MenuHandler
                 if (dev is Thermostat thermo)
                 {
                     Console.Write("Zadejte novou teplotu (5-30): ");
-                    if (int.TryParse(Console.ReadLine(), out int temp) && temp >=5 && temp <=30 && thermo.IsOn)
-                    {thermo.TargetTemperature = temp;}
-                else
-                {
-                    Console.WriteLine("Zadali jste špatné hodnoty");
-                    Console.ReadKey();
-                }
+                    if (int.TryParse(Console.ReadLine(), out int temp) && temp >= 5 && temp <= 30 && thermo.IsOn)
+                    {
+                        thermo.TargetTemperature = temp;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Zadali jste špatné hodnoty");
+                        Console.ReadKey();
+                    }
                 }
                 else if (dev is Light light)
                 {
                     Console.Write("Zadejte jas (0-100): ");
-                    if (int.TryParse(Console.ReadLine(), out int bright) && bright >0 && bright <=100 && light.IsOn) 
-                    {light.Brightness = bright;}
+                    if (int.TryParse(Console.ReadLine(), out int bright) && bright > 0 && bright <= 100 && light.IsOn)
+                    {
+                        light.Brightness = bright;
+                    }
                     else
                     {
                         Console.WriteLine("Zadali jste špatné hodnoty");
@@ -294,7 +374,7 @@ public class MenuHandler
         Console.Clear();
         Console.WriteLine("Vyberte typ: 1. Světlo | 2. Thermostat");
         string typeChoice = Console.ReadLine() ?? "";
-        
+
         Console.Write("Název zařízení: ");
         string name = Console.ReadLine() ?? "";
 
@@ -318,5 +398,17 @@ public class MenuHandler
         {
             _db.DeleteDevice(devices[idx - 1].Id);
         }
+        else
+        {
+            Console.WriteLine("Zadané číslo nemá přiřazenou místnost");
+        }
+    }
+
+
+    private void AccessDeniedMessage()
+    {
+        Console.WriteLine("\n[CHYBA] Tato akce je povolena pouze uživateli s rolí 'Admin'.");
+        Console.WriteLine("Stiskněte libovolnou klávesu...");
+        Console.ReadKey();
     }
 }

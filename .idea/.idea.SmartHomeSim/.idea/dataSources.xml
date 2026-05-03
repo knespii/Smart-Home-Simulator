@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="@smarthomesim.auzipzp.mongodb.net" uuid="cec5a9c4-f258-48a1-bfef-aadf26041965">
+      <driver-ref>mongo.4</driver-ref>
+      <synchronize>true</synchronize>
+      <configured-by-url>true</configured-by-url>
+      <jdbc-driver>com.dbschema.MongoJdbcDriver</jdbc-driver>
+      <jdbc-url>mongodb+srv://viktor6767:l2CpKvPhv9rilWGN@smarthomesim.auzipzp.mongodb.net/?appName=smarthomesim</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+  </component>
+</project>

@@ -1,5 +1,28 @@
-bin/
-obj/
+## JetBrains Rider (IDE)
 .idea/
-appsettings.json
+*.sln.DotSettings.user
+
+## Visual Studio
+.vs/
+[Bb]in/
+[Oo]bj/
 *.user
+*.userosscache
+*.sln.docstates
+
+## .NET / C#
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.dll
+*.exe
+*.pdb
+*.log
+
+## OS soubory
+.DS_Store
+Thumbs.db
+
+## MongoDB / Lokální data
+appsettings.Development.json
